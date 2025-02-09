@@ -62,7 +62,7 @@ async function run() {
 
     // Collections here
     const eventCollection = client.db("eventPulse").collection("events");
-    const userCollection = client.db("eventPuse").collection("users");
+    const userCollection = client.db("eventPulse").collection("users");
     // Collections here
 
     // JWT Api
@@ -90,6 +90,54 @@ async function run() {
         .send({ success: true });
     });
     // JWT Api
+
+    // User APIS here
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.get("/users/role/:email", verifyToken, async (req, res) => {
+      const { email } = req.params;
+      try {
+        const user = await userCollection.findOne({ email });
+        res.send({ role: user.role });
+      } catch (error) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+    // User APIS here
+
+    // Event APIS here
+    app.post("/events", verifyToken, async (req, res) => {
+      const event = req.body;
+      const result = await eventCollection.insertOne(event);
+      res.send(result);
+    });
+
+    app.get("/events", async (req, res) => {
+      try {
+        const { filter } = req.query;
+
+        const currentDate = new Date();
+
+        let query = {};
+
+        if (filter === "upcoming") {
+          query.eventTime = { $gte: currentDate.toISOString() };
+        } else if (filter === "past") {
+          query.eventTime = { $lt: currentDate.toISOString() };
+        }
+
+        const events = await eventCollection.find(query).toArray();
+        res.json(events);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        res.status(500).json({ message: "Error fetching events" });
+      }
+    });
+    // Event APIS here
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
