@@ -14,8 +14,8 @@ const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "eventpulse-event-management.web.app",
-      "eventpulse-event-management.firebaseapp.com",
+      "https://eventpulse-event-management.web.app",
+      "https://eventpulse-event-management.firebaseapp.com",
     ],
     credentials: true,
   },
@@ -26,8 +26,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "eventpulse-event-management.web.app",
-      "eventpulse-event-management.firebaseapp.com",
+      "https://eventpulse-event-management.web.app",
+      "https://eventpulse-event-management.firebaseapp.com",
     ],
     credentials: true,
   })
