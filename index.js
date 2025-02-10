@@ -3,14 +3,32 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:5173",
+      "eventpulse-event-management.web.app",
+      "eventpulse-event-management.firebaseapp.com",
+    ],
+    credentials: true,
+  },
+});
 
 // Middleware Settings here
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "eventpulse-event-management.web.app",
+      "eventpulse-event-management.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -53,9 +71,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
@@ -64,6 +82,37 @@ async function run() {
     const eventCollection = client.db("eventPulse").collection("events");
     const userCollection = client.db("eventPulse").collection("users");
     // Collections here
+
+    // Socket.IO connection here
+    io.on("connection", (socket) => {
+      console.log("A user connected", socket.id);
+
+      socket.on("joinEvent", async ({ eventId }) => {
+        console.log(`User joined event ${eventId}`);
+
+        const eventObjectId = new ObjectId(eventId);
+
+        // Update database here
+        const updatedEvent = await eventCollection.findOneAndUpdate(
+          { _id: eventObjectId },
+          { $inc: { attendees: 1 } },
+          { returnDocument: "after" }
+        );
+
+        // Emit updated attendees list
+        if (updatedEvent) {
+          io.emit("updateAttendees", {
+            eventId: eventId,
+            attendees: updatedEvent.attendees,
+          });
+        }
+      });
+
+      socket.on("disconnect", () => {
+        console.log("A user disconnected", socket.id);
+      });
+    });
+    // Socket.IO connection here
 
     // JWT Api
     app.post("/jwt", async (req, res) => {
@@ -151,7 +200,7 @@ app.get("/", (req, res) => {
   res.send("Event server is running");
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Event Server is running on PORT: ${port}`);
 });
 // Get and Listen Settings here
