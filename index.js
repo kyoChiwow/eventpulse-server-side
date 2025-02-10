@@ -161,8 +161,21 @@ async function run() {
     // Event APIS here
     app.post("/events", verifyToken, async (req, res) => {
       const event = req.body;
-      const result = await eventCollection.insertOne(event);
-      res.send(result);
+
+      const eventTime = new Date(event.eventTime); 
+
+      const newEvent = {
+        ...event, 
+        eventTime,
+      };
+
+      try {
+        const result = await eventCollection.insertOne(newEvent);
+        res.send(result);
+      } catch (error) {
+        console.error("Error creating event:", error);
+        res.status(500).send("Error creating event");
+      }
     });
 
     app.get("/events", async (req, res) => {
@@ -174,9 +187,9 @@ async function run() {
         let query = {};
 
         if (filter === "upcoming") {
-          query.eventTime = { $gte: currentDate.toISOString() };
+          query.eventTime = { $gte: currentDate };
         } else if (filter === "past") {
-          query.eventTime = { $lt: currentDate.toISOString() };
+          query.eventTime = { $lt: currentDate };
         }
 
         const events = await eventCollection.find(query).toArray();
